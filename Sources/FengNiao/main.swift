@@ -22,12 +22,11 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-
-import Foundation
 import CommandLineKit
-import Rainbow
 import FengNiaoKit
+import Foundation
 import PathKit
+import Rainbow
 
 let appVersion = "0.8.1"
 
@@ -39,12 +38,12 @@ let EX_USAGE: Int32 = 64
 let cli = CommandLineKit.CommandLine()
 cli.formatOutput = { s, type in
     var str: String
-    switch(type) {
+    switch type {
     case .error: str = s.red.bold
     case .optionFlag: str = s.green.underline
     default: str = s
     }
-    
+
     return cli.defaultFormat(s: str, type: type)
 }
 
@@ -53,10 +52,10 @@ let projectPathOption = StringOption(
     helpMessage: "Root path of your Xcode project. Default is current folder.")
 cli.addOption(projectPathOption)
 
-let isForceOption = BoolOption(
-    longFlag: "force",
-    helpMessage: "Delete the found unused files without asking.")
-cli.addOption(isForceOption)
+// let isForceOption = BoolOption(
+//     longFlag: "force",
+//     helpMessage: "Delete the found unused files without asking.")
+// cli.addOption(isForceOption)
 
 let excludePathOption = MultiStringOption(
     shortFlag: "e", longFlag: "exclude",
@@ -73,18 +72,22 @@ let fileExtOption = MultiStringOption(
     helpMessage: "In which types of files we should search for resource usage. Default is 'm mm swift xib storyboard plist'")
 cli.addOption(fileExtOption)
 
-let skipProjRefereceCleanOption = BoolOption(
-    longFlag: "skip-proj-reference",
-    helpMessage: "Skip the Project file (.pbxproj) reference cleaning. By skipping it, the project file will be left untouched. You may want to skip ths step if you are trying to build multiple projects with dependency and keep .pbxproj unchanged while compiling."
-)
-cli.addOption(skipProjRefereceCleanOption)
+// let skipProjRefereceCleanOption = BoolOption(
+//     longFlag: "skip-proj-reference",
+//     helpMessage: "Skip the Project file (.pbxproj) reference cleaning. By skipping it, the project file will be left untouched. You may want to skip ths step if you are trying to build multiple projects with dependency and keep .pbxproj unchanged while compiling.")
+// cli.addOption(skipProjRefereceCleanOption)
 
 let versionOption = BoolOption(longFlag: "version", helpMessage: "Print version.")
 cli.addOption(versionOption)
 
 let helpOption = BoolOption(shortFlag: "h", longFlag: "help",
-                      helpMessage: "Print this help message.")
+                            helpMessage: "Print this help message.")
 cli.addOption(helpOption)
+
+let outputOption = StringOption(
+    shortFlag: "o", longFlag: "output",
+    helpMessage: "Result output path. Default is './result.txt'")
+cli.addOption(outputOption)
 
 do {
     try cli.parse()
@@ -106,15 +109,15 @@ if helpOption.value {
 
 if versionOption.value {
     print(appVersion)
-    exit(EX_OK);
+    exit(EX_OK)
 }
 
-
 let projectPath = projectPathOption.value ?? "."
-let isForce = isForceOption.value
+// let isForce = isForceOption.value
 let excludePaths = excludePathOption.value ?? []
 let resourceExtentions = resourceExtOption.value ?? ["imageset", "jpg", "png", "gif", "pdf"]
 let fileExtensions = fileExtOption.value ?? ["h", "m", "mm", "swift", "xib", "storyboard", "plist"]
+let outputPath = outputOption.value ?? "./result.txt"
 
 let fengNiao = FengNiao(projectPath: projectPath,
                         excludedPaths: excludePaths,
@@ -142,51 +145,72 @@ do {
 if unusedFiles.isEmpty {
     print("😎 Hu, you have no unused resources in path: \(Path(projectPath).absolute()).".green.bold)
     exit(EX_OK)
+} else {
+    let size = unusedFiles.reduce(0) { $0 + $1.size }.fn_readableSize
+    let absolutePath = Path(outputPath).absolute()
+    print("\(unusedFiles.count) unused files are found. Total Size: \(size).".yellow.bold)
+    print("The result is output to '\(absolutePath)'.".yellow.bold)
+    var text: String = ""
+    text += "时间 \(Date().string())\n未使用文件数 \(unusedFiles.count)\n未使用总大小 \(size)\n"
+    for file in unusedFiles.sorted(by: { $0.size > $1.size }) {
+        let result = "\(file.readableSize) \(file.path.string)\n"
+        text += result
+    }
+    try? absolutePath.write(text, encoding: .utf8)
 }
 
-if !isForce {
-    var result = promptResult(files: unusedFiles)
-    while result == .list {
-        for file in unusedFiles.sorted(by: { $0.size > $1.size }) {
-            print("\(file.readableSize) \(file.path.string)")
-        }
-        result = promptResult(files: unusedFiles)
-    }
-    
-    switch result {
-    case .list:
-        fatalError()
-    case .delete:
-        break
-    case .ignore:
-        print("Ignored. Nothing to do, bye!".green.bold)
-        exit(EX_OK)
+extension Date {
+    func string(withFormat format: String = "yyyy/MM/dd HH:mm:ss") -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = format
+        return dateFormatter.string(from: self)
     }
 }
 
-print("Deleting unused files...⚙".bold)
+/*
+  if !isForce {
+      var result = promptResult(files: unusedFiles)
+      while result == .list {
+          for file in unusedFiles.sorted(by: { $0.size > $1.size }) {
+              print("\(file.readableSize) \(file.path.string)")
+          }
+          result = promptResult(files: unusedFiles)
+      }
 
-let (deleted, failed) = FengNiao.delete(unusedFiles)
-guard failed.isEmpty else {
-    print("\(unusedFiles.count - failed.count) unused files are deleted. But we encountered some error while deleting these \(failed.count) files:".yellow.bold)
-    for (fileInfo, err) in failed {
-        print("\(fileInfo.path.string) - \(err.localizedDescription)")
-    }
-    exit(EX_USAGE)
-}
+      switch result {
+      case .list:
+          fatalError()
+      case .delete:
+          break
+      case .ignore:
+          print("Ignored. Nothing to do, bye!".green.bold)
+          exit(EX_OK)
+      }
+  }
 
+  print("Deleting unused files...⚙".bold)
 
-print("\(unusedFiles.count) unused files are deleted.".green.bold)
+  let (deleted, failed) = FengNiao.delete(unusedFiles)
+  guard failed.isEmpty else {
+      print("\(unusedFiles.count - failed.count) unused files are deleted. But we encountered some error while deleting these \(failed.count) files:".yellow.bold)
+      for (fileInfo, err) in failed {
+          print("\(fileInfo.path.string) - \(err.localizedDescription)")
+      }
+      exit(EX_USAGE)
+  }
 
-if !skipProjRefereceCleanOption.value {
-    if let children = try? Path(projectPath).absolute().children(){
-        print("Now Deleting unused Reference in project.pbxproj...⚙".bold)
-        for path in children {
-            if path.lastComponent.hasSuffix("xcodeproj"){
-                let pbxproj = path + "project.pbxproj"
-                FengNiao.deleteReference(projectFilePath: pbxproj, deletedFiles: deleted)
-            }
-        }
-        print("Unused Reference deleted successfully.".green.bold)
-    }
-}
+  print("\(unusedFiles.count) unused files are deleted.".green.bold)
+
+ if !skipProjRefereceCleanOption.value {
+     if let children = try? Path(projectPath).absolute().children() {
+         print("Now Deleting unused Reference in project.pbxproj...⚙".bold)
+         for path in children {
+             if path.lastComponent.hasSuffix("xcodeproj") {
+                 let pbxproj = path + "project.pbxproj"
+                 FengNiao.deleteReference(projectFilePath: pbxproj, deletedFiles: deleted)
+             }
+         }
+         print("Unused Reference deleted successfully.".green.bold)
+     }
+ }
+ */
