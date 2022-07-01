@@ -117,7 +117,7 @@ let projectPath = projectPathOption.value ?? "."
 let excludePaths = excludePathOption.value ?? []
 let resourceExtentions = resourceExtOption.value ?? ["imageset", "jpg", "png", "gif", "pdf"]
 let fileExtensions = fileExtOption.value ?? ["h", "m", "mm", "swift", "xib", "storyboard", "plist"]
-let outputPath = outputOption.value ?? "./result.txt"
+let outputPath = outputOption.value ?? "./unused.txt"
 
 let fengNiao = FengNiao(projectPath: projectPath,
                         excludedPaths: excludePaths,
