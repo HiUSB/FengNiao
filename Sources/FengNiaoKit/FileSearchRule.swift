@@ -72,7 +72,7 @@ struct ObjCImageSearchRule: RegPatternSearchRule {
 
 struct SwiftImageSearchRule: RegPatternSearchRule {
     let extensions: [String]
-    let patterns = ["\"(.*?)\"", "\\(.(.*?)\\)"]
+    let patterns = ["\"(.*?)\""]
 }
 
 struct XibImageSearchRule: RegPatternSearchRule {
@@ -90,3 +90,7 @@ struct PbxprojImageSearchRule: RegPatternSearchRule {
     let patterns = ["ASSETCATALOG_COMPILER_APPICON_NAME = \"?(.*?)\"?;", "ASSETCATALOG_COMPILER_COMPLICATION_NAME = \"?(.*?)\"?;"]
 }
 
+struct CustomImageSearchRule: RegPatternSearchRule {
+    let extensions: [String]
+    let patterns = ["GWBundle.yc_image\\(.(.*?)\\)"]
+}

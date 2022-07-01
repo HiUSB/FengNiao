@@ -46,7 +46,7 @@ enum FileType {
     
     func searchRules(extensions: [String]) -> [FileSearchRule] {
         switch self {
-        case .swift: return [SwiftImageSearchRule(extensions: extensions)]
+        case .swift: return [SwiftImageSearchRule(extensions: extensions), CustomImageSearchRule(extensions: extensions)]
         case .objc: return [ObjCImageSearchRule(extensions: extensions)]
         case .xib: return [XibImageSearchRule()]
         case .plist: return [PlistImageSearchRule(extensions: extensions)]
