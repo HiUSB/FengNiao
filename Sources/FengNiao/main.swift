@@ -151,9 +151,9 @@ if unusedFiles.isEmpty {
     print("\(unusedFiles.count) unused files are found. Total Size: \(size).".yellow.bold)
     print("The result is output to '\(absolutePath)'.".yellow.bold)
     var text: String = ""
-    text += "时间 \(Date().string())\n未使用文件数 \(unusedFiles.count)\n未使用总大小 \(size)\n"
+    text += "时间: \(Date().string())\n未使用文件数: \(unusedFiles.count)\n未使用总大小: \(size)\n"
     for file in unusedFiles.sorted(by: { $0.size > $1.size }) {
-        let result = "\(file.readableSize) \(file.path.string)\n"
+        let result = "\(file.readableSize): \(file.path.string)\n"
         text += result
     }
     try? absolutePath.write(text, encoding: .utf8)
